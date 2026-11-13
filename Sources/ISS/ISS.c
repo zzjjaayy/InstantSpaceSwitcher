@@ -489,8 +489,15 @@ double iss_swipe_progress_for_phase(CGSGesturePhase phase, ISSDirection directio
 }
 
 // The fling on the ended phase is what commits the switch on macOS 27. The payload
-// field is 16.16 fixed point (max ~32767), so the speed setting isn't reused here.
+// field is 16.16 fixed point (max ~32767). "Instant" (>= 2000) keeps the original
+// 9999 fling; lower speeds pass through so the Dock animates a shorter slide.
 static const double kModernFlingVelocity = 9999.0;
+static const double kModernMaxVelocity = 32000.0;
+
+static double iss_modern_fling_velocity(double velocity) {
+    if (velocity >= 2000.0) return kModernFlingVelocity;
+    return velocity > kModernMaxVelocity ? kModernMaxVelocity : velocity;
+}
 
 // Cached natural scrolling preference; -1 means re-read it
 static int naturalScrolling = -1;
@@ -521,7 +528,7 @@ static double iss_modern_swipe_sign(ISSDirection direction) {
     return naturalScrolling ? sign : -sign;
 }
 
-static bool iss_post_modern_dock_swipe(CGSGesturePhase phase, ISSDirection direction) {
+static bool iss_post_modern_dock_swipe(CGSGesturePhase phase, ISSDirection direction, double velocity) {
     const double sign = iss_modern_swipe_sign(direction);
 
     CGEventRef ev = CGEventCreate(NULL);
@@ -542,7 +549,7 @@ static bool iss_post_modern_dock_swipe(CGSGesturePhase phase, ISSDirection direc
     CGEventSetDoubleValueField(ev, kCGEventGestureSwipePositionX, 0.1);
     // Match FasterSwiper: only the Ended event carries velocity.
     if (phase == kCGSGesturePhaseEnded) {
-        CGEventSetDoubleValueField(ev, kCGEventGestureSwipeVelocityX, sign * kModernFlingVelocity);
+        CGEventSetDoubleValueField(ev, kCGEventGestureSwipeVelocityX, sign * iss_modern_fling_velocity(velocity));
     }
 
     CGEventRef augmented = iss_augment_dock_swipe_event(ev);
@@ -571,7 +578,7 @@ static bool iss_post_modern_dock_swipe(CGSGesturePhase phase, ISSDirection direc
 
 static bool iss_post_dock_swipe(CGSGesturePhase phase, ISSDirection direction, double velocity) {
     if (iss_requires_event_augmentation()) {
-        return iss_post_modern_dock_swipe(phase, direction);
+        return iss_post_modern_dock_swipe(phase, direction, velocity);
     }
 
     const bool isRight = (direction == ISSDirectionRight);
@@ -596,10 +603,30 @@ static bool iss_post_dock_swipe(CGSGesturePhase phase, ISSDirection direction, d
     return true;
 }
 
+// ponytail: assumes the Dock animation stretches linearly with refresh rate;
+// expose a user multiplier if 120Hz still doesn't match 60Hz.
+static double iss_refresh_rate_scale(void) {
+    CGEventRef tmp = CGEventCreate(NULL);
+    if (!tmp) return 1.0;
+    CGPoint cursor = CGEventGetLocation(tmp);
+    CFRelease(tmp);
+
+    CGDirectDisplayID display = CGMainDisplayID();
+    uint32_t count = 0;
+    CGGetDisplaysWithPoint(cursor, 1, &display, &count);
+
+    CGDisplayModeRef mode = CGDisplayCopyDisplayMode(display);
+    if (!mode) return 1.0;
+    double rate = CGDisplayModeGetRefreshRate(mode);
+    CGDisplayModeRelease(mode);
+    return rate > 60.0 ? rate / 60.0 : 1.0;
+}
+
 static bool iss_perform_switch_gesture(ISSDirection direction, double velocity) {
     // Send three gesture events--began, changed, and ended
     // If we only send two then mission control doesn't work.
     lastGestureTime = CFAbsoluteTimeGetCurrent();
+    velocity *= iss_refresh_rate_scale();
     return iss_post_dock_swipe(kCGSGesturePhaseBegan,   direction, velocity)
         && iss_post_dock_swipe(kCGSGesturePhaseChanged, direction, velocity)
         && iss_post_dock_swipe(kCGSGesturePhaseEnded,   direction, velocity);

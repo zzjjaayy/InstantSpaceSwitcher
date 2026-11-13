@@ -21,8 +21,11 @@ final class GeneralSettingsViewController: NSViewController {
     checkboxWithTitle: "Hide menu bar icon", target: nil, action: nil)
 
   private let durationPresets = [100, 200, 300, 500, 750, 1000]
-  private let animationSpeedOptions = ["Normal", "Fast", "Faster", "Fastest", "Instant"]
-  private let animationSpeedValues: [Double] = [40.0, 50.0, 60.0, 80.0, 2000.0]
+  private let animationSpeedOptions = [
+    "Slowest (10)", "Slower (15)", "Slow (20)", "Relaxed (25)", "Calm (30)",
+    "Normal (40)", "Fast (50)", "Faster (60)", "Fastest (80)", "Instant",
+  ]
+  private let animationSpeedValues: [Double] = [10.0, 15.0, 20.0, 25.0, 30.0, 40.0, 50.0, 60.0, 80.0, 2000.0]
 
   private let defaults = UserDefaults.standard
 
@@ -129,10 +132,10 @@ final class GeneralSettingsViewController: NSViewController {
       if let index = animationSpeedValues.firstIndex(where: { $0 == animationSpeedValue }) {
         animationSpeedPopup.selectItem(at: index)
       } else {
-        animationSpeedPopup.selectItem(at: 4)
+        animationSpeedPopup.selectItem(at: animationSpeedValues.count - 1)
       }
     } else {
-      animationSpeedPopup.selectItem(at: 4)
+      animationSpeedPopup.selectItem(at: animationSpeedValues.count - 1)
     }
 
     launchAtLoginCheckbox.state = SMAppService.mainApp.status == .enabled ? .on : .off

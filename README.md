@@ -2,6 +2,15 @@
 
 Native instant workspace switching on macOS. No more waiting for animations.
 
+> Fork of [jurplel/InstantSpaceSwitcher](https://github.com/jurplel/InstantSpaceSwitcher). Homebrew and release downloads below install upstream; build from source to get the fork's changes.
+
+## Fork improvements
+
+- Animation speed setting works on macOS 27 (upstream always switches instantly there).
+- Slower presets: Slowest, Slower, Slow, Relaxed, Calm.
+- ProMotion/120Hz: speed scales with refresh rate, so it feels the same as 60Hz.
+- CLI: `ISS_SPEED=<n> ISSCli right` to try speeds.
+
 https://github.com/user-attachments/assets/037422c9-3fb7-41cd-8da7-58d28c4c8eff
 
 ## Features
@@ -31,7 +40,7 @@ Pre-built binaries are available through Github Releases [here](https://github.c
 ### Build from source
 
 ```sh
-git clone https://github.com/jurplel/InstantSpaceSwitcher
+git clone https://github.com/zzjjaayy/InstantSpaceSwitcher
 cd InstantSpaceSwitcher
 ./dist/build.sh
 open ./build/InstantSpaceSwitcher.app

@@ -15,6 +15,10 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    // Tuning knob: ISS_SPEED=60 ISSCli right
+    const char *speed = getenv("ISS_SPEED");
+    if (speed) iss_set_gesture_speed(atof(speed));
+
     ISSDirection direction = ISSDirectionLeft;
     bool useIndex = false;
     unsigned int targetIndex = 0;
